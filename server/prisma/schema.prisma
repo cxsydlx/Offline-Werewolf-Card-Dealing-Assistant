@@ -1,0 +1,318 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// 账号与设备
+// ============================================================
+
+model Account {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique @db.VarChar(50)
+  isFixed   Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  deviceBinding  DeviceBinding?
+  nickname       Nickname?
+  roomPlayers    RoomPlayer[]
+  gamePlayers    GamePlayer[]
+  hostedRooms    Room[]              @relation("Host")
+  hostedGames    Game[]              @relation("GameHost")
+  createdPresets RolePreset[]
+  notesAuthored  PlayerNote[]        @relation("Author")
+  notesTargeted  PlayerNote[]        @relation("Target")
+}
+
+model DeviceBinding {
+  id                Int      @id @default(autoincrement())
+  deviceFingerprint String   @unique @db.VarChar(64)
+  accountId         Int      @unique
+  boundAt           DateTime @default(now())
+  lastActiveAt      DateTime @updatedAt
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+}
+
+model Nickname {
+  id        Int      @id @default(autoincrement())
+  accountId Int      @unique
+  nickname  String   @db.VarChar(50)
+  updatedAt DateTime @updatedAt
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+}
+
+// ============================================================
+// 角色与模块定义（全局库）
+// ============================================================
+
+model RoleDefinition {
+  id               Int      @id @default(autoincrement())
+  key              String   @unique @db.VarChar(30)
+  name             String   @db.VarChar(30)
+  faction          String   @db.VarChar(20)
+  description      String   @db.Text
+  skillDescription String   @db.Text
+  icon             String?  @db.VarChar(50)
+  sortOrder        Int      @default(0)
+  createdAt        DateTime @default(now())
+
+  modules     ModuleDefinition[]
+  gameRoles   GameRole[]
+  presetItems RolePresetItem[]
+  gamePlayers GamePlayer[]
+}
+
+model ModuleDefinition {
+  id                  Int      @id @default(autoincrement())
+  roleDefinitionId    Int
+  key                 String   @unique @db.VarChar(40)
+  name                String   @db.VarChar(50)
+  description         String   @db.Text
+  triggerOrder        Int      @default(0)
+  targetSelectionType String   @db.VarChar(20)
+  minTargets          Int      @default(0)
+  maxTargets          Int      @default(1)
+  allowSkip           Boolean  @default(true)
+  resolutionType      String   @db.VarChar(30)
+  defaultParams       Json?
+  enabledByDefault    Boolean  @default(true)
+  createdAt           DateTime @default(now())
+
+  roleDefinition RoleDefinition @relation(fields: [roleDefinitionId], references: [id], onDelete: Cascade)
+  gameModules    GameModule[]
+}
+
+// ============================================================
+// 角色预设
+// ============================================================
+
+model RolePreset {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(100)
+  createdBy Int
+  createdAt DateTime @default(now())
+
+  creator Account           @relation(fields: [createdBy], references: [id])
+  items   RolePresetItem[]
+}
+
+model RolePresetItem {
+  id       Int @id @default(autoincrement())
+  presetId Int
+  roleId   Int
+  count    Int @default(0)
+
+  preset RolePreset      @relation(fields: [presetId], references: [id], onDelete: Cascade)
+  role   RoleDefinition  @relation(fields: [roleId], references: [id])
+}
+
+// ============================================================
+// 房间
+// ============================================================
+
+model Room {
+  id            Int       @id @default(autoincrement())
+  code          String    @unique @db.VarChar(10)
+  hostAccountId Int
+  status        String    @default("waiting") @db.VarChar(20)
+  hostPlays     Boolean   @default(true)
+  currentGameId Int?
+  createdAt     DateTime  @default(now())
+  closedAt      DateTime?
+  updatedAt     DateTime  @updatedAt
+
+  host    Account      @relation("Host", fields: [hostAccountId], references: [id])
+  players RoomPlayer[]
+  games   Game[]
+}
+
+model RoomPlayer {
+  id        Int      @id @default(autoincrement())
+  roomId    Int
+  accountId Int
+  isHost    Boolean  @default(false)
+  joinedAt  DateTime @default(now())
+
+  room    Room    @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+}
+
+// ============================================================
+// 对局
+// ============================================================
+
+model Game {
+  id            Int       @id @default(autoincrement())
+  roomId        Int
+  roundNumber   Int       @default(1)
+  hostAccountId Int
+  status        String    @default("setup") @db.VarChar(20)
+  playerCount   Int       @default(0)
+  spectatorMode Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  endedAt       DateTime?
+
+  room    Room          @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  host    Account       @relation("GameHost", fields: [hostAccountId], references: [id])
+  players GamePlayer[]
+  roles   GameRole[]
+  modules GameModule[]
+  rounds  NightRound[]
+  logs    GameLog[]
+  notes   PlayerNote[]
+}
+
+model GameRole {
+  id     Int @id @default(autoincrement())
+  gameId Int
+  roleId Int
+  count  Int @default(0)
+
+  game Game           @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  role RoleDefinition @relation(fields: [roleId], references: [id])
+}
+
+model GamePlayer {
+  id               Int      @id @default(autoincrement())
+  gameId           Int
+  accountId        Int
+  seatNumber       Int
+  roleId           Int?
+  isAlive          Boolean  @default(true)
+  isHost           Boolean  @default(false)
+  identityRevealed Boolean  @default(false)
+  joinedAt         DateTime @default(now())
+
+  game          Game                @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  account       Account             @relation(fields: [accountId], references: [id])
+  role          RoleDefinition?     @relation(fields: [roleId], references: [id])
+  preferences   IdentityPreference[]
+  nightActions  NightAction[]       @relation("Actor")
+  nightTargets  NightActionTarget[]
+  dawnResults   DawnResult[]
+
+  @@index([gameId])
+  @@index([accountId])
+}
+
+model IdentityPreference {
+  id               Int     @id @default(autoincrement())
+  gamePlayerId     Int
+  preferredRoleIds String  @db.Text
+
+  gamePlayer GamePlayer @relation(fields: [gamePlayerId], references: [id], onDelete: Cascade)
+}
+
+model GameModule {
+  id                 Int      @id @default(autoincrement())
+  gameId             Int
+  moduleDefinitionId Int
+  enabled            Boolean  @default(true)
+  triggerOrder       Int      @default(0)
+  params             String?  @db.Text
+  updatedAt          DateTime @updatedAt
+
+  game             Game             @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  moduleDefinition ModuleDefinition @relation(fields: [moduleDefinitionId], references: [id])
+  nightActions     NightAction[]
+}
+
+// ============================================================
+// 黑夜阶段
+// ============================================================
+
+model NightRound {
+  id          Int       @id @default(autoincrement())
+  gameId      Int
+  roundNumber Int
+  phase       String    @default("night") @db.VarChar(20)
+  status      String    @default("in_progress") @db.VarChar(20)
+  startedAt   DateTime  @default(now())
+  endedAt     DateTime?
+
+  game    Game          @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  actions NightAction[]
+  results DawnResult[]
+}
+
+model NightAction {
+  id             Int      @id @default(autoincrement())
+  nightRoundId   Int
+  gameModuleId   Int
+  actorPlayerId  Int
+  actionType     String   @db.VarChar(30)
+  sequenceNumber Int
+  isUndone       Boolean  @default(false)
+  resultData     String?  @db.Text
+  createdAt      DateTime @default(now())
+
+  @@index([nightRoundId])
+
+  nightRound NightRound         @relation(fields: [nightRoundId], references: [id], onDelete: Cascade)
+  gameModule GameModule         @relation(fields: [gameModuleId], references: [id])
+  actor      GamePlayer         @relation("Actor", fields: [actorPlayerId], references: [id])
+  targets    NightActionTarget[]
+}
+
+model NightActionTarget {
+  id             Int @id @default(autoincrement())
+  nightActionId  Int
+  targetPlayerId Int
+
+  nightAction NightAction @relation(fields: [nightActionId], references: [id], onDelete: Cascade)
+  target      GamePlayer  @relation(fields: [targetPlayerId], references: [id])
+}
+
+model DawnResult {
+  id                  Int      @id @default(autoincrement())
+  nightRoundId        Int
+  gamePlayerId        Int
+  isDead              Boolean  @default(false)
+  causeOfDeath        String?  @db.VarChar(30)
+  investigationResult String?  @db.VarChar(20)
+  otherEffects        String?  @db.Text
+  createdAt           DateTime @default(now())
+
+  @@index([nightRoundId])
+  @@index([gamePlayerId])
+
+  nightRound NightRound @relation(fields: [nightRoundId], references: [id], onDelete: Cascade)
+  player     GamePlayer @relation(fields: [gamePlayerId], references: [id])
+}
+
+// ============================================================
+// 笔记与日志
+// ============================================================
+
+model PlayerNote {
+  id              Int      @id @default(autoincrement())
+  gameId          Int
+  authorPlayerId  Int
+  targetAccountId Int
+  content         String   @db.Text
+  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
+
+  game   Game    @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  author Account @relation("Author", fields: [authorPlayerId], references: [id])
+  target Account @relation("Target", fields: [targetAccountId], references: [id])
+}
+
+model GameLog {
+  id          Int      @id @default(autoincrement())
+  gameId      Int
+  roundNumber Int
+  phase       String   @db.VarChar(20)
+  action      String   @db.VarChar(100)
+  details     String?  @db.Text
+  createdAt   DateTime @default(now())
+
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+}

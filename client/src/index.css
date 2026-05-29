@@ -1,0 +1,464 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   暗夜魔法 · 狼人杀 · Apple Liquid Glass
+   ============================================ */
+
+:root {
+  --bg-deep: #0D0F1A;
+  --bg-surface: rgba(22, 24, 36, 0.75);
+  --bg-card: rgba(255, 255, 255, 0.07);
+  --bg-card-hover: rgba(255, 255, 255, 0.11);
+  --bg-overlay: rgba(0, 0, 0, 0.55);
+
+  --text-primary: #EDEEF2;
+  --text-secondary: #9A9BA8;
+  --text-muted: #5E5F6E;
+
+  --accent: #D4A843;
+  --accent-soft: rgba(212, 168, 67, 0.12);
+  --accent-glow: 0 0 28px rgba(212, 168, 67, 0.2);
+
+  --color-werewolf: #E74C3C;
+  --color-werewolf-bg: rgba(231, 76, 60, 0.12);
+  --color-seer: #5DADE2;
+  --color-seer-bg: rgba(93, 173, 226, 0.12);
+  --color-witch: #C39BD3;
+  --color-witch-bg: rgba(195, 155, 211, 0.12);
+  --color-villager: #58D68D;
+  --color-villager-bg: rgba(88, 214, 141, 0.10);
+  --color-hunter: #F0B27A;
+  --color-hunter-bg: rgba(240, 178, 122, 0.12);
+  --color-guard: #48C9B0;
+  --color-guard-bg: rgba(72, 201, 176, 0.12);
+  --color-neutral: #B0A8D0;
+  --color-neutral-bg: rgba(176, 168, 208, 0.12);
+
+  --border-subtle: rgba(255, 255, 255, 0.05);
+  --border-card: rgba(255, 255, 255, 0.08);
+  --border-active: rgba(212, 168, 67, 0.35);
+  --border-inner: rgba(255, 255, 255, 0.06);
+
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+  --radius-xl: 28px;
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 8px 32px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.55);
+  --shadow-glow: 0 0 32px rgba(212, 168, 67, 0.1);
+  --shadow-inner-top: inset 0 0.5px 0 rgba(255, 255, 255, 0.08);
+  --shadow-inner-bottom: inset 0 -0.5px 0 rgba(0, 0, 0, 0.2);
+
+  --identity-card-back: #181B28;
+  --identity-card-border: rgba(212, 168, 67, 0.18);
+}
+
+/* ============================================
+   全局基础
+   ============================================ */
+
+* {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  box-sizing: border-box;
+}
+
+html { font-size: 16px; }
+
+body {
+  margin: 0;
+  background: #0D0F1A;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 15% 25%, rgba(100, 40, 160, 0.25) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 50% at 80% 70%, rgba(180, 140, 50, 0.18) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 50% 10%, rgba(40, 90, 180, 0.15) 0%, transparent 50%);
+  background-attachment: fixed;
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior: none;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+/* 全屏模式 — CSS 兜底（浏览器不支持原生 Fullscreen API 时） */
+.app-fullscreen {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 100 !important;
+  width: 100vw !important;
+  width: 100dvw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  background: #0D0F1A;
+}
+.app-fullscreen body {
+  overflow: hidden !important;
+  touch-action: pan-x pan-y;
+}
+
+/* 原生全屏时禁止滚动并居中内容 */
+html:fullscreen body,
+html:-webkit-full-screen body {
+  overflow: hidden !important;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  justify-content: center;
+}
+html:fullscreen #root,
+html:-webkit-full-screen #root {
+  width: 100%;
+  max-width: 480px;
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* 动态光斑 ×3 */
+.app-orbs { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+.app-orb {
+  position: absolute; border-radius: 50%; filter: blur(100px); opacity: 0.35;
+}
+.app-orb--1 {
+  width: 420px; height: 420px;
+  background: radial-gradient(circle, rgba(130, 80, 200, 0.25), transparent 70%);
+  top: -100px; left: -80px;
+  animation: orbFloat1 14s ease-in-out infinite;
+}
+.app-orb--2 {
+  width: 320px; height: 320px;
+  background: radial-gradient(circle, rgba(200, 160, 60, 0.2), transparent 70%);
+  bottom: -60px; right: -60px;
+  animation: orbFloat2 18s ease-in-out infinite;
+}
+.app-orb--3 {
+  width: 260px; height: 260px;
+  background: radial-gradient(circle, rgba(60, 100, 200, 0.2), transparent 70%);
+  top: 40%; left: 50%;
+  animation: orbFloat3 16s ease-in-out infinite;
+}
+
+@keyframes orbFloat1 {
+  0%,100% { transform: translate(0,0) scale(1); }
+  33% { transform: translate(40px,-30px) scale(1.15); }
+  66% { transform: translate(-20px,20px) scale(0.9); }
+}
+@keyframes orbFloat2 {
+  0%,100% { transform: translate(0,0) scale(1); }
+  33% { transform: translate(-35px,-25px) scale(1.12); }
+  66% { transform: translate(25px,15px) scale(0.92); }
+}
+@keyframes orbFloat3 {
+  0%,100% { transform: translate(0,0) scale(1); }
+  50% { transform: translate(-25px,20px) scale(1.15); }
+}
+
+/* ============================================
+   液态玻璃卡片
+   ============================================ */
+
+.glass {
+  position: relative;
+  background: var(--bg-card);
+  backdrop-filter: blur(28px) saturate(150%);
+  -webkit-backdrop-filter: blur(28px) saturate(150%);
+  border: 0.5px solid var(--border-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md), var(--shadow-inner-top), var(--shadow-inner-bottom);
+  overflow: hidden;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.glass:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md), var(--shadow-inner-top), var(--shadow-inner-bottom), 0 4px 20px rgba(212,168,67,0.06);
+}
+
+/* SVG 噪点纹理 */
+.glass::after {
+  content: '';
+  position: absolute; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E");
+  background-size: 256px 256px;
+  opacity: 0.025;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.glass-active {
+  background: var(--accent-soft);
+  border-color: var(--border-active);
+  box-shadow: var(--shadow-md), var(--shadow-glow), var(--shadow-inner-top);
+}
+
+
+/* 导航专用 */
+.glass-nav {
+  background: var(--bg-surface);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 0.5px solid var(--border-subtle);
+  box-shadow: var(--shadow-lg), inset 0 0.5px 0 rgba(255,255,255,0.06);
+}
+
+/* ============================================
+   按钮
+   ============================================ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 0.5px solid var(--border-card);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  padding: 12px 24px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+  letter-spacing: 0.01em;
+  user-select: none;
+  -webkit-user-select: none;
+  position: relative;
+  overflow: hidden;
+}
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
+.btn:active {
+  transform: scale(0.94);
+  transition: all 0.08s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.btn:active:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+}
+.btn:disabled { opacity: 0.3; pointer-events: none; transform: none; }
+
+.btn-primary {
+  background: linear-gradient(135deg, #BF8F35 0%, #D4A843 50%, #DFBB5E 100%);
+  border: none;
+  color: #0D0F1A;
+  font-weight: 700;
+  box-shadow: 0 4px 20px rgba(212, 168, 67, 0.25), inset 0 1px 0 rgba(255,255,255,0.2);
+}
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(212, 168, 67, 0.4), inset 0 1px 0 rgba(255,255,255,0.25);
+}
+.btn-primary:active {
+  background: linear-gradient(135deg, #A87A25 0%, #C8963A 50%, #D4A843 100%);
+  box-shadow: 0 2px 8px rgba(212, 168, 67, 0.2);
+  transform: scale(0.94);
+  transition: all 0.06s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: var(--border-subtle);
+  color: var(--text-secondary);
+}
+.btn-ghost:hover { color: var(--text-primary); border-color: var(--border-card); }
+.btn-ghost:active { background: var(--bg-card-hover); color: var(--text-primary); }
+
+.btn-danger {
+  background: rgba(231, 76, 60, 0.08);
+  border-color: rgba(231, 76, 60, 0.25);
+  color: var(--color-werewolf);
+}
+.btn-danger:hover { background: rgba(231, 76, 60, 0.12); border-color: rgba(231, 76, 60, 0.4); }
+.btn-danger:active { background: rgba(231, 76, 60, 0.18); }
+
+.btn-sm { padding: 7px 14px; font-size: 0.82rem; border-radius: var(--radius-sm); }
+.btn-lg { padding: 15px 32px; font-size: 1.05rem; border-radius: var(--radius-lg); }
+
+/* ============================================
+   输入框
+   ============================================ */
+
+.input {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 0.5px solid var(--border-card);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  padding: 14px 18px;
+  font-size: 1rem;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.input:focus {
+  border-color: var(--border-active);
+  box-shadow: 0 0 0 3px rgba(212, 168, 67, 0.06);
+}
+.input::placeholder { color: var(--text-muted); }
+
+/* ============================================
+   身份卡 — 黑底白字 + 多层高斯模糊防偷看
+   ============================================ */
+
+.identity-card {
+  width: 100%;
+  max-width: 300px;
+  aspect-ratio: 16/10;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  position: relative;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+}
+
+/* 底层：模糊遮挡层 */
+.identity-blur-layer {
+  position: absolute; inset: 0;
+  background: #0a0a0a;
+  border-radius: var(--radius-xl);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 20px;
+  transition: filter 0.3s ease;
+  z-index: 2;
+}
+
+/* 多层高斯模糊 */
+.identity-blur-layer::before {
+  content: ''; position: absolute; inset: 0;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border-radius: inherit;
+}
+.identity-blur-layer::after {
+  content: ''; position: absolute; inset: -4px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: inherit;
+  z-index: -1;
+}
+
+.identity-blur-layer.blurred {
+  filter: blur(8px);
+}
+.identity-blur-layer.revealed {
+  filter: blur(0px);
+  transition: filter 0.25s ease;
+}
+.identity-blur-layer.hiding {
+  filter: blur(8px);
+  transition: filter 0.04s ease;
+}
+
+/* 文字层 */
+.identity-text {
+  position: relative; z-index: 3;
+  text-align: center;
+  color: #ffffff;
+}
+.identity-role-name {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+.identity-skill {
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.65);
+  line-height: 1.5;
+  max-width: 280px;
+}
+.identity-faction {
+  margin-top: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  opacity: 0.8;
+}
+
+/* 阵营无光晕 — 防止颜色暗示阵营 */
+
+/* ============================================
+   角色标签
+   ============================================ */
+
+.role-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 12px; border-radius: 20px;
+  font-size: 0.78rem; font-weight: 600; letter-spacing: 0.02em;
+}
+.role-tag.werewolf { background: var(--color-werewolf-bg); color: var(--color-werewolf); border: 0.5px solid rgba(231,76,60,0.3); }
+.role-tag.seer { background: var(--color-seer-bg); color: var(--color-seer); border: 0.5px solid rgba(93,173,226,0.3); }
+.role-tag.witch { background: var(--color-witch-bg); color: var(--color-witch); border: 0.5px solid rgba(195,155,211,0.3); }
+.role-tag.villager { background: var(--color-villager-bg); color: var(--color-villager); border: 0.5px solid rgba(88,214,141,0.25); }
+.role-tag.hunter { background: var(--color-hunter-bg); color: var(--color-hunter); border: 0.5px solid rgba(240,178,122,0.3); }
+.role-tag.guard { background: var(--color-guard-bg); color: var(--color-guard); border: 0.5px solid rgba(72,201,176,0.3); }
+.role-tag.neutral { background: var(--color-neutral-bg); color: var(--color-neutral); border: 0.5px solid rgba(176,168,208,0.3); }
+.role-tag.cupid,
+.role-tag.fox,
+.role-tag.piper { background: var(--color-neutral-bg); color: var(--color-neutral); border: 0.5px solid rgba(176,168,208,0.3); }
+
+/* ============================================
+   工具类
+   ============================================ */
+
+.text-gold { color: var(--accent); }
+.text-secondary { color: var(--text-secondary); }
+.text-muted { color: var(--text-muted); }
+
+.badge {
+  display: inline-flex; align-items: center;
+  padding: 3px 10px; border-radius: 20px;
+  font-size: 0.7rem; font-weight: 600; letter-spacing: 0.03em;
+}
+.badge-gold   { background: rgba(212,168,67,0.12); color: var(--accent); border: 0.5px solid var(--border-active); }
+.badge-red    { background: var(--color-werewolf-bg); color: var(--color-werewolf); }
+.badge-green  { background: var(--color-villager-bg); color: var(--color-villager); }
+.badge-blue   { background: var(--color-seer-bg); color: var(--color-seer); }
+.badge-purple { background: var(--color-witch-bg); color: var(--color-witch); }
+.badge-neutral { background: var(--color-neutral-bg); color: var(--color-neutral); border: 0.5px solid rgba(176,168,208,0.3); }
+
+.divider { height: 0.5px; background: var(--border-card); margin: 16px 0; }
+
+/* 骨架屏 */
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-card) 25%, rgba(255,255,255,0.04) 50%, var(--bg-card) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* 动画 */
+@keyframes fadeIn  { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes pulse   { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+@keyframes glowPulse { 0%,100% { box-shadow: 0 4px 20px rgba(212,168,67,0.25); } 50% { box-shadow: 0 4px 36px rgba(212,168,67,0.5); } }
+
+.animate-in       { animation: fadeIn 0.4s ease-out; }
+.animate-slide-up { animation: slideUp 0.35s ease-out; }
+.btn-glow         { animation: glowPulse 2.5s ease-in-out infinite; }
+.animate-pulse    { animation: pulse 2s ease-in-out infinite; }
+
+/* 滚动条 */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+
+/* 长按文本选中禁用 */
+.no-select { user-select: none; -webkit-user-select: none; }
