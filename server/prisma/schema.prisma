@@ -24,6 +24,7 @@ model Account {
   gamePlayers    GamePlayer[]
   hostedRooms    Room[]              @relation("Host")
   hostedGames    Game[]              @relation("GameHost")
+  joinRequests   RoomJoinRequest[]
   createdPresets RolePreset[]
   notesAuthored  PlayerNote[]        @relation("Author")
   notesTargeted  PlayerNote[]        @relation("Target")
@@ -128,9 +129,10 @@ model Room {
   closedAt      DateTime?
   updatedAt     DateTime  @updatedAt
 
-  host    Account      @relation("Host", fields: [hostAccountId], references: [id])
-  players RoomPlayer[]
-  games   Game[]
+  host         Account            @relation("Host", fields: [hostAccountId], references: [id])
+  players      RoomPlayer[]
+  games        Game[]
+  joinRequests RoomJoinRequest[]
 }
 
 model RoomPlayer {
@@ -142,6 +144,19 @@ model RoomPlayer {
 
   room    Room    @relation(fields: [roomId], references: [id], onDelete: Cascade)
   account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+}
+
+model RoomJoinRequest {
+  id        Int      @id @default(autoincrement())
+  roomId    Int
+  accountId Int
+  status    String   @default("pending") @db.VarChar(20)
+  createdAt DateTime @default(now())
+
+  room    Room    @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, accountId])
 }
 
 // ============================================================

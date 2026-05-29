@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { useGameStore } from "../store/gameStore";
 import { useDeviceStore } from "../store/deviceStore";
 import { api } from "../api/client";
-import QRScanner from "../components/game/QRScanner";
 import WerewolfCard from "../components/game/WerewolfCard";
 
 const DEBUG_KEY = "werewolf_debug";
@@ -14,13 +13,13 @@ export default function LobbyPage() {
   const { bindings } = useDeviceStore();
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [joinCode, setJoinCode] = useState("");
-  const [showScanner, setShowScanner] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const [error, setError] = useState("");
   const [debug, setDebug] = useState(() => localStorage.getItem(DEBUG_KEY) === "1");
   const [showDev, setShowDev] = useState(false);
+  const [pollMs, setPollMs] = useState(() => Number(localStorage.getItem("werewolf_poll_ms") || 550));
 
   useEffect(() => { fetchAccounts(); loadSearch(); }, []);
 
@@ -118,7 +117,6 @@ export default function LobbyPage() {
         <h3 className="font-semibold text-sm mb-3">加入房间</h3>
         <div className="flex gap-2 mb-3">
           <input value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} placeholder="输入房间号" className="input flex-1 text-center text-lg tracking-[0.25em] font-mono" maxLength={6} />
-          <button onClick={() => setShowScanner(true)} className="btn btn-ghost !px-3 text-xl">📷</button>
         </div>
         <button onClick={() => joinRoom()} className="btn btn-primary w-full">加入房间</button>
       </WerewolfCard>
@@ -158,7 +156,34 @@ export default function LobbyPage() {
       {showDev && (
         <WerewolfCard className="!p-5 mb-4">
           <p className="text-xs text-muted mb-3 uppercase tracking-wider">开发调试</p>
-          <div className="space-y-2">
+          <div className="space-y-3">
+            <div>
+              <p className="text-xs text-secondary mb-2">轮询刷新速度</p>
+              <div className="flex gap-2">
+                {[
+                  { ms: 300, label: "0.3s" },
+                  { ms: 500, label: "0.5s" },
+                  { ms: 1000, label: "1s" },
+                  { ms: 2000, label: "2s" },
+                ].map(({ ms, label }) => (
+                  <button key={ms}
+                    onClick={() => {
+                      if ((ms === 300 || ms === 500) && pollMs !== ms) {
+                        const speed = ms === 300 ? "0.3秒" : "0.5秒";
+                        if (confirm(`你真的要改成${speed}吗？\n\n这样会对我的服务器造成很大压力的 🤦\n\n[确定] = 关我屁事\n[取消] = 就此作罢`)) {
+                          // 关我屁事
+                        } else {
+                          alert("你人真好，其实是我骗你的 😂");
+                        }
+                      }
+                      localStorage.setItem("werewolf_poll_ms", String(ms)); setPollMs(ms);
+                    }}
+                    className={`flex-1 btn btn-sm ${pollMs === ms ? "btn-primary" : "btn-ghost"}`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <button onClick={async () => {
               if (!confirm("确定重置所有数据？这将删除所有对局、房间、绑定和自定义账号。")) return;
               try { await api.post("/rooms/dev/reset"); alert("已重置！请刷新页面"); window.location.reload(); }
@@ -181,15 +206,6 @@ export default function LobbyPage() {
         📋 我的房间
       </button>
 
-      {showScanner && <QRScanner onResult={async (c) => {
-        setShowScanner(false);
-        try {
-          const accountId = bindings[0]?.accountId;
-          if (!accountId) { setError("请先绑定账号"); return; }
-          await api.post(`/rooms/${c}/join`, { accountId });
-          navigate(`/room/${c}`);
-        } catch (e: any) { setError(e.message || "无法加入房间"); }
-      }} onClose={() => setShowScanner(false)} />}
     </div>
   );
 }

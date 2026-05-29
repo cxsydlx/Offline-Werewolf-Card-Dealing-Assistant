@@ -25,6 +25,18 @@ router.put("/:id/nickname", async (req, res, next) => {
   }
 });
 
+router.put("/:id/rename", async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { name } = req.body;
+    if (!name) throw new AppError(400, "MISSING_NAME", "缺少名称");
+    const result = await accountService.renameAccount(Number(id), String(name));
+    res.json({ ok: true, account: result });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post("/custom", async (req, res, next) => {
   try {
     const { name } = req.body;

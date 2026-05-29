@@ -114,12 +114,17 @@ export default function AccountManagementPage() {
 
       {/* 改名弹窗 */}
       {editNick && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm" onClick={() => setEditNick(null)}>
-          <WerewolfCard className="w-full max-w-lg rounded-b-none !p-6 space-y-4 animate-slide-up" onClick={() => {}}>
-            <h3 className="font-bold">修改昵称</h3>
-            <input value={editNick.name} onChange={(e) => setEditNick({ ...editNick, name: e.target.value })} className="input" maxLength={50} />
-            <button onClick={async () => { await api.put(`/accounts/${editNick.id}/nickname`, { nickname: editNick.name }); setEditNick(null); await fetchAccounts(); }} className="btn btn-primary w-full">保存</button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setEditNick(null)}>
+          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-sm mx-4">
+          <WerewolfCard className="!p-6 space-y-4 animate-slide-up">
+            <h3 className="font-bold">修改名称</h3>
+            <input value={editNick.name} onChange={(e) => setEditNick({ ...editNick, name: e.target.value })} className="input" maxLength={50} autoFocus />
+            <div className="flex gap-2">
+              <button onClick={async () => { await api.put(`/accounts/${editNick.id}/rename`, { name: editNick.name }); setEditNick(null); await fetchAccounts(); }} className="btn btn-primary flex-1">保存</button>
+              <button onClick={() => setEditNick(null)} className="btn btn-ghost flex-1">取消</button>
+            </div>
           </WerewolfCard>
+          </div>
         </div>
       )}
     </div>

@@ -3,7 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useDeviceStore } from "../store/deviceStore";
 import { useGameStore } from "../store/gameStore";
 import { api } from "../api/client";
-import QRCode from "qrcode";
 import WerewolfCard from "../components/game/WerewolfCard";
 
 interface RoomState {
@@ -23,7 +22,6 @@ export default function RoomPage() {
   const { roleDefinitions, fetchRoleDefinitions } = useGameStore();
   const [st, setSt] = useState<RoomState | null>(null);
   const [error, setError] = useState("");
-  const [qrData, setQrData] = useState(""); const [showQR, setShowQR] = useState(false);
   const [kickTarget, setKickTarget] = useState<{ id: number; name: string } | null>(null);
   const [counts, setCounts] = useState<Map<number, number>>(new Map());
   const [selectedRoles, setSelectedRoles] = useState<Set<number>>(new Set());
@@ -65,7 +63,8 @@ export default function RoomPage() {
         if (!d?.game) { setCounts(new Map()); setSelectedRoles(new Set()); setAssignments([]); }
       } catch (e: any) { setError(e.status === 404 ? "房间不存在" : (e.message || "连接失败，正在重试...")); }
     };
-    poll(); timer = setInterval(poll, 500);
+    const pollMs = Number(localStorage.getItem("werewolf_poll_ms") || 550);
+    poll(); timer = setInterval(poll, pollMs);
     return () => { stop = true; clearInterval(timer); };
   }, [code]);
 
@@ -118,8 +117,6 @@ export default function RoomPage() {
   const hd = useCallback(() => { ih.current = true; ht.current = setTimeout(() => { if (ih.current) setRevealed(true); }, 300); }, []);
   const hu = useCallback(() => { ih.current = false; if (ht.current) clearTimeout(ht.current); setRevealed(false); }, []);
 
-  const showQRCode = async () => { setQrData(await QRCode.toDataURL(`${location.origin}/room/${code}`, { width: 240, margin: 2 })); setShowQR(true); };
-
   if (!st) return <div className="flex items-center justify-center min-h-screen"><p className="text-muted animate-pulse">加载中...</p></div>;
 
   const sl: Record<string, string> = { waiting: "等待开始", playing: "对局中", between_games: "局间休息", closed: "已关闭" };
@@ -145,7 +142,7 @@ export default function RoomPage() {
       {/* ====== LOBBY ====== */}
       {v === "lobby" && (
         <>
-          <div className="text-center mb-4"><div className="flex items-center justify-center gap-3 mb-3"><button onClick={showQRCode} className="btn btn-sm btn-ghost">📷</button></div><div className="text-4xl font-bold font-mono tracking-[0.25em] text-gold">{code}</div></div>
+          <div className="text-center mb-4"><div className="text-4xl font-bold font-mono tracking-[0.25em] text-gold">{code}</div></div>
           <WerewolfCard className="mb-5 !p-5">
             <p className="text-xs text-muted mb-3 uppercase tracking-wider">成员 · {room?.players.length || 0}人</p>
             {room?.players.map((p: any) => (
@@ -155,6 +152,7 @@ export default function RoomPage() {
               </div>
             ))}
           </WerewolfCard>
+
           {(room?.history?.length || 0) > 0 && <WerewolfCard className="mb-5 !p-5"><p className="text-xs text-muted mb-3 uppercase tracking-wider">历史</p>{room.history.map((g: any) => <div key={g.id} className="flex items-center justify-between p-3 rounded-xl border border-white/5"><span className="text-sm">🌙 第{g.roundNumber}轮</span><span className="text-xs text-muted">{g.status==="ended"?"已结束":g.status}</span></div>)}</WerewolfCard>}
           <div className="space-y-3">
             {isHost && (room?.status === "waiting" || room?.status === "between_games") && <button onClick={startGame} className="btn btn-primary btn-lg w-full btn-glow">{room?.status==="waiting"?"🎭 开始第一轮":"🔄 开始下一轮"}</button>}
@@ -230,7 +228,6 @@ export default function RoomPage() {
         </>
       )}
 
-      {showQR&&<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={()=>setShowQR(false)}><div onClick={e=>e.stopPropagation()}><WerewolfCard className="!p-6 text-center animate-slide-up mx-4 max-w-xs"><h3 className="font-bold mb-2">房间{code}</h3>{qrData&&<img src={qrData} alt="QR" className="w-56 h-56 mx-auto rounded-xl"/>}<button onClick={()=>setShowQR(false)} className="btn btn-ghost w-full mt-4">关闭</button></WerewolfCard></div></div>}
       {kickTarget&&<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={()=>setKickTarget(null)}><div onClick={e=>e.stopPropagation()}><WerewolfCard className="!p-6 text-center animate-slide-up mx-4 max-w-xs"><h3 className="font-bold mb-2">踢出{kickTarget.name}</h3><button onClick={kick} className="btn btn-danger w-full mb-2">确认</button><button onClick={()=>setKickTarget(null)} className="btn btn-ghost w-full">取消</button></WerewolfCard></div></div>}
     </div>
   );

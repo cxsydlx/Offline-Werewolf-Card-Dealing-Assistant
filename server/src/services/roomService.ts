@@ -82,10 +82,30 @@ export async function joinRoom(code: string, accountId: number) {
   if (!room) throw new AppError(404, "ROOM_NOT_FOUND", "房间不存在");
   if (room.status === "closed") throw new AppError(400, "ROOM_CLOSED", "房间已关闭");
 
-  // 检查是否为房间成员
+  // 如果不在成员名单中，扫码即加入
   const existingPlayer = room.players.find((p) => p.accountId === accountId);
   if (!existingPlayer) {
-    throw new AppError(403, "NOT_INVITED", "您不在本房间的参赛名单中");
+    await prisma.roomPlayer.create({
+      data: { roomId: room.id, accountId, isHost: false },
+    });
+    // 如果已有进行中的对局，也加入 GamePlayer
+    if (room.currentGameId) {
+      const game = await prisma.game.findUnique({
+        where: { id: room.currentGameId },
+        include: { players: true },
+      });
+      if (game && game.status !== "ended") {
+        const maxSeat = game.players.reduce((m, p) => Math.max(m, p.seatNumber), 0);
+        await prisma.gamePlayer.create({
+          data: { gameId: game.id, accountId, seatNumber: maxSeat + 1, isHost: false },
+        });
+        // 更新 playerCount
+        await prisma.game.update({
+          where: { id: game.id },
+          data: { playerCount: { increment: 1 } },
+        });
+      }
+    }
   }
 
   return { ok: true, roomCode: code, accountId };

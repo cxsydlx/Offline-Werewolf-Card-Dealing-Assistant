@@ -31,7 +31,7 @@ export default function LandingPage() {
         const d = await api.get<{ ok: boolean; rooms: any[] }>("/rooms/my/list");
         if (!stop) setMyRooms(d.rooms || []);
       } catch (_) {}
-      if (!stop) timer = setTimeout(poll, 550);
+      if (!stop) timer = setTimeout(poll, 700);
     };
     poll();
     return () => { stop = true; clearTimeout(timer); };

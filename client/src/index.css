@@ -87,41 +87,29 @@ body {
   overflow-x: hidden;
 }
 
-/* 全屏模式 — CSS 兜底（浏览器不支持原生 Fullscreen API 时） */
+/* 全屏模式 */
 .app-fullscreen {
   position: fixed !important;
   inset: 0 !important;
-  z-index: 100 !important;
-  width: 100vw !important;
-  width: 100dvw !important;
-  height: 100vh !important;
+  z-index: 200 !important;
+  width: 100% !important;
+  height: 100% !important;
   height: 100dvh !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
   background: #0D0F1A;
+  margin: 0 !important;
+  padding: 0 !important;
+  max-width: none !important;
 }
-.app-fullscreen body {
-  overflow: hidden !important;
-  touch-action: pan-x pan-y;
+.app-fullscreen > .relative.z-10 {
+  max-width: 480px !important;
+  margin: 0 auto !important;
 }
 
-/* 原生全屏时禁止滚动并居中内容 */
 html:fullscreen body,
 html:-webkit-full-screen body {
   overflow: hidden !important;
-  height: 100vh;
-  height: 100dvh;
-  display: flex;
-  justify-content: center;
-}
-html:fullscreen #root,
-html:-webkit-full-screen #root {
-  width: 100%;
-  max-width: 480px;
-  height: 100vh;
-  height: 100dvh;
-  overflow-y: auto;
-  overflow-x: hidden;
 }
 
 /* 动态光斑 ×3 */

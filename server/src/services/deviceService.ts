@@ -2,7 +2,6 @@ import { prisma } from "../utils/prisma";
 import { AppError } from "../middleware/errorHandler";
 
 export async function registerDevice(fingerprint: string) {
-  // 只更新活跃时间，不创建未绑定记录（避免外键约束问题）
   const existing = await prisma.deviceBinding.findUnique({
     where: { deviceFingerprint: fingerprint },
   });

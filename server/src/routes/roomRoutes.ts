@@ -44,7 +44,21 @@ router.get("/:code/state", async (req, res, next) => {
     // 无活跃对局 → lobby
     const gameId = room.currentGameId;
     if (!gameId) {
-      return res.json({ ok: true, view: "lobby", room: roomData, isHost, isMember, accountId });
+      let joinRequests: any[] = [];
+      if (isHost) {
+        const jrs = await prisma.roomJoinRequest.findMany({
+          where: { roomId: room.id, status: "pending" },
+          include: { account: { include: { nickname: true } } },
+          orderBy: { createdAt: "asc" },
+        });
+        joinRequests = jrs.map((jr) => ({
+          id: jr.id,
+          accountId: jr.accountId,
+          accountName: jr.account.nickname?.nickname || jr.account.name,
+          createdAt: jr.createdAt.toISOString(),
+        }));
+      }
+      return res.json({ ok: true, view: "lobby", room: roomData, isHost, isMember, accountId, joinRequests });
     }
 
     // 获取对局数据
@@ -207,10 +221,97 @@ router.get("/:code/history", async (req, res, next) => {
   try { res.json({ ok: true, games: await roomService.getRoomHistory(req.params.code) }); } catch (err) { next(err); }
 });
 
+// ── 加入申请 ──
+
+async function getAccountId(fp?: string): Promise<number | null> {
+  if (!fp) return null;
+  const bindings = await import("../services/deviceService").then((s) => s.getBindings(fp));
+  return bindings[0]?.accountId || null;
+}
+
+// POST /api/rooms/:code/apply — 申请加入房间
+router.post("/:code/apply", async (req, res, next) => {
+  try {
+    const accountId = await getAccountId(req.deviceFingerprint);
+    if (!accountId) throw new AppError(400, "NO_BINDING", "请先绑定账号");
+    const request = await prisma.roomJoinRequest.upsert({
+      where: { roomId_accountId: { roomId: (await prisma.room.findUniqueOrThrow({ where: { code: req.params.code } })).id, accountId } },
+      update: { status: "pending", createdAt: new Date() },
+      create: { roomId: (await prisma.room.findUniqueOrThrow({ where: { code: req.params.code } })).id, accountId },
+    });
+    res.json({ ok: true, request });
+  } catch (err) { next(err); }
+});
+
+// GET /api/rooms/:code/requests — 主持人查看待审批申请
+router.get("/:code/requests", async (req, res, next) => {
+  try {
+    const accountId = await getAccountId(req.deviceFingerprint);
+    if (!accountId) throw new AppError(400, "NO_BINDING", "请先绑定账号");
+    const room = await prisma.room.findUnique({ where: { code: req.params.code } });
+    if (!room || room.hostAccountId !== accountId) throw new AppError(403, "NOT_HOST", "仅主持人可查看");
+    const requests = await prisma.roomJoinRequest.findMany({
+      where: { roomId: room.id, status: "pending" },
+      include: { account: { include: { nickname: true } } },
+      orderBy: { createdAt: "asc" },
+    });
+    res.json({ ok: true, requests });
+  } catch (err) { next(err); }
+});
+
+// POST /api/rooms/:code/requests/:id/approve — 主持人同意
+router.post("/:code/requests/:id/approve", async (req, res, next) => {
+  try {
+    const accountId = await getAccountId(req.deviceFingerprint);
+    if (!accountId) throw new AppError(400, "NO_BINDING", "请先绑定账号");
+    const room = await prisma.room.findUnique({ where: { code: req.params.code } });
+    if (!room || room.hostAccountId !== accountId) throw new AppError(403, "NOT_HOST", "仅主持人可审批");
+    const jr = await prisma.roomJoinRequest.findUnique({ where: { id: Number(req.params.id) } });
+    if (!jr || jr.roomId !== room.id) throw new AppError(404, "NOT_FOUND", "申请不存在");
+    // 批准：加入房间
+    const exists = await prisma.roomPlayer.findFirst({
+      where: { roomId: room.id, accountId: jr.accountId },
+    });
+    await prisma.$transaction([
+      prisma.roomJoinRequest.update({ where: { id: jr.id }, data: { status: "approved" } }),
+      ...(exists ? [] : [prisma.roomPlayer.create({ data: { roomId: room.id, accountId: jr.accountId } })]),
+    ]);
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// POST /api/rooms/:code/requests/:id/reject — 主持人拒绝
+router.post("/:code/requests/:id/reject", async (req, res, next) => {
+  try {
+    const accountId = await getAccountId(req.deviceFingerprint);
+    if (!accountId) throw new AppError(400, "NO_BINDING", "请先绑定账号");
+    const room = await prisma.room.findUnique({ where: { code: req.params.code } });
+    if (!room || room.hostAccountId !== accountId) throw new AppError(403, "NOT_HOST", "仅主持人可审批");
+    const jr = await prisma.roomJoinRequest.findUnique({ where: { id: Number(req.params.id) } });
+    if (!jr || jr.roomId !== room.id) throw new AppError(404, "NOT_FOUND", "申请不存在");
+    await prisma.roomJoinRequest.update({ where: { id: jr.id }, data: { status: "rejected" } });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// GET /api/rooms/:code/my-request — 玩家查看自己的申请状态
+router.get("/:code/my-request", async (req, res, next) => {
+  try {
+    const accountId = await getAccountId(req.deviceFingerprint);
+    if (!accountId) return res.json({ ok: true, request: null });
+    const room = await prisma.room.findUnique({ where: { code: req.params.code } });
+    if (!room) throw new AppError(404, "ROOM_NOT_FOUND", "房间不存在");
+    const jr = await prisma.roomJoinRequest.findUnique({
+      where: { roomId_accountId: { roomId: room.id, accountId } },
+    });
+    res.json({ ok: true, request: jr });
+  } catch (err) { next(err); }
+});
+
 // POST /api/rooms/dev/reset — 开发模式重置所有数据
 router.post("/dev/reset", async (_req, res, next) => {
   try {
-    const tables = ["NightActionTarget","NightAction","DawnResult","NightRound","IdentityPreference","GameModule","GameRole","GamePlayer","GameLog","PlayerNote","Game","RoomPlayer","Room","DeviceBinding","Nickname"];
+    const tables = ["NightActionTarget","NightAction","DawnResult","NightRound","IdentityPreference","GameModule","GameRole","GamePlayer","GameLog","PlayerNote","Game","RoomJoinRequest","RoomPlayer","Room","DeviceBinding","Nickname"];
     for (const t of tables) await prisma.$executeRawUnsafe(`DELETE FROM \`${t}\``);
     await prisma.account.deleteMany({ where: { isFixed: false } });
     res.json({ ok: true, message: "已重置" });

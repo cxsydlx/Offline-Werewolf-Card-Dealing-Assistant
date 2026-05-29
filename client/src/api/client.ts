@@ -6,6 +6,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     "X-Device-Fingerprint": getFingerprint(),
+    "Cache-Control": "no-cache, no-store",
+    "Pragma": "no-cache",
     ...(options.headers as Record<string, string> || {}),
   };
 
@@ -28,7 +30,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 export const api = {
-  get: <T>(path: string) => request<T>(path),
+  get: <T>(path: string) => {
+    const sep = path.includes("?") ? "&" : "?";
+    return request<T>(`${path}${sep}_=${Date.now().toString(36)}`);
+  },
   post: <T>(path: string, body?: any) =>
     request<T>(path, { method: "POST", body: JSON.stringify(body) }),
   put: <T>(path: string, body?: any) =>

@@ -64,6 +64,25 @@ export async function updateNickname(accountId: number, nickname: string) {
   return { accountId, nickname: result.nickname };
 }
 
+export async function renameAccount(accountId: number, newName: string) {
+  const account = await prisma.account.findUnique({ where: { id: accountId } });
+  if (!account) throw new AppError(404, "ACCOUNT_NOT_FOUND", "账号不存在");
+  if (!newName || newName.trim().length === 0) throw new AppError(400, "INVALID_NAME", "名称不能为空");
+  if (newName.length > 50) throw new AppError(400, "NAME_TOO_LONG", "名称不能超过50个字符");
+
+  const existing = await prisma.account.findUnique({ where: { name: newName.trim() } });
+  if (existing && existing.id !== accountId) {
+    throw new AppError(409, "NAME_EXISTS", `名称 "${newName}" 已存在`);
+  }
+
+  const updated = await prisma.account.update({
+    where: { id: accountId },
+    data: { name: newName.trim() },
+  });
+
+  return { id: updated.id, name: updated.name };
+}
+
 export async function createCustomAccount(name: string) {
   if (!name || name.trim().length === 0) {
     throw new AppError(400, "INVALID_NAME", "账号名不能为空");
