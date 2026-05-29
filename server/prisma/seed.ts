@@ -7,18 +7,18 @@ async function main() {
   // 12 个固定账号
   // ========================================
   const fixedNames = [
-    "陶维维",
-    "Mk",
-    "王建涛",
-    "卢博恩",
-    "巫",
-    "郭伟峰",
-    "石",
-    "张光耀",
-    "樊",
-    "肖",
-    "佟",
-    "王玉先",
+    "玩家1",
+    "玩家2",
+    "玩家3",
+    "玩家4",
+    "玩家5",
+    "玩家6",
+    "玩家7",
+    "玩家8",
+    "玩家9",
+    "玩家10",
+    "玩家11",
+    "玩家12",
   ];
 
   console.log("📝 创建固定账号...");
@@ -383,8 +383,8 @@ async function main() {
   ];
 
   for (const preset of presets) {
-    // Use host account (陶维维, id=1) as preset creator
-    const hostAccount = await prisma.account.findUnique({ where: { name: "陶维维" } });
+    // Use first account as preset creator
+    const hostAccount = await prisma.account.findUnique({ where: { name: "玩家1" } });
     if (!hostAccount) continue;
 
     const created = await prisma.rolePreset.create({
